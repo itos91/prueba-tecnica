@@ -1,14 +1,17 @@
 import asyncio
+import argparse
 from nats.aio.client import Client as NATS
-from nats.errors import TimeoutError
+from sensor_reader import SensorReader
 
 class NatsHandler:
     """
     Clase que maneja los mensajes NATS
     """
-    def __init__(self) -> None:
+    def __init__(self, args) -> None:
         self.sensor_state = False
         self.nc = NATS()
+        self.freq = args.freq
+        self.sensor_reader = SensorReader(args.min_value, args.max_value, args.sensor)
 
     async def start(self):
         """
@@ -48,13 +51,14 @@ class NatsHandler:
             if self.sensor_state:
                 # Empezamos a capturar datos de sensores
                 print("Captura de datos sensor")
+                data = self.sensor_reader.read_sensor()
                 # Publicamos datos
                 await self.nc.publish(
                     subject="sensor.data", 
-                    payload=b"Test"
+                    payload=str(data).encode()
                 )
                 # Dejamos n segundos entre captura y captura
-                await asyncio.sleep(10)
+                await asyncio.sleep(self.freq)
             else:
                 # Dejamos 1 segunda para que no se quede parado en bucle infinito
                 await asyncio.sleep(1)
@@ -62,8 +66,16 @@ class NatsHandler:
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Aplicación de captura de datos del sensor")
+    parser.add_argument("--sensor", type=str, required=True, choices=["mockup", "real"])
+    parser.add_argument("--freq", type=int, required=True, help="Frecuencia de lectura del sensor en segundos")
+    parser.add_argument("--min_value", type=int, required=True, help="Valor mínimo generado por el sensor mockup")
+    parser.add_argument("--max_value", type=int, required=True, help="Valor máximo generado por el sensor mockup")
+
+    args = parser.parse_args()
+
     #Creamos instancia de la clase NatsHandler
-    app = NatsHandler()
+    app = NatsHandler(args)
 
     # Obtenemos el bucle de eventos de asyncio
     loop = asyncio.get_event_loop()
