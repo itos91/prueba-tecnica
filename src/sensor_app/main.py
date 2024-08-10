@@ -2,6 +2,7 @@ import asyncio
 import argparse
 from nats.aio.client import Client as NATS
 from sensor_reader import SensorReader
+from db import Database
 
 class NatsHandler:
     """
@@ -12,6 +13,7 @@ class NatsHandler:
         self.nc = NATS()
         self.freq = args.freq
         self.sensor_reader = SensorReader(args.min_value, args.max_value, args.sensor)
+        self.db_conn = Database(args.db_uri)
 
     async def start(self):
         """
@@ -57,6 +59,8 @@ class NatsHandler:
                     subject="sensor.data", 
                     payload=str(data).encode()
                 )
+                # Insertamos datos en mysql
+                self.db_conn.store_data(data=data)
                 # Dejamos n segundos entre captura y captura
                 await asyncio.sleep(self.freq)
             else:
@@ -71,6 +75,7 @@ if __name__ == '__main__':
     parser.add_argument("--freq", type=int, required=True, help="Frecuencia de lectura del sensor en segundos")
     parser.add_argument("--min_value", type=int, required=True, help="Valor mínimo generado por el sensor mockup")
     parser.add_argument("--max_value", type=int, required=True, help="Valor máximo generado por el sensor mockup")
+    parser.add_argument("--db_uri", type=str, required=True, help="URI de conexión con la base de datos SQL")
 
     args = parser.parse_args()
 
