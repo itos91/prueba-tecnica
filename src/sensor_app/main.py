@@ -1,8 +1,13 @@
 import asyncio
 import argparse
+import logging
 from nats.aio.client import Client as NATS
 from sensor_reader import SensorReader
 from db import Database
+
+# Configuración logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class NatsHandler:
     """
@@ -19,6 +24,18 @@ class NatsHandler:
         """
         Conecta con el servidor NATS y se suscribe a los subjects de inicio y parada del sensor
         """
+        try:
+            await self.nc.connect("nats://localhost:4222")
+        except Exception as e:
+            usage = """
+                nats-pub [-s SERVER] <subject>
+
+                Example:
+
+                nats-sub -s demo.nats.io help -q workers 
+            """
+            logger.warning(usage)
+            logger.error(f"Exited! Error {e}")
         # Conectamos con servidor local NATS
         await self.nc.connect("nats://localhost:4222")
         # Nos subscribimos a los subjets "sensor.start" y "sensor.stop"
@@ -33,7 +50,7 @@ class NatsHandler:
             msg (nats.aio.client.Msg): Mensaje subscrito
         """
         self.sensor_state = True
-        print("Inicio de recogida de datos del sensor")
+        logger.info("Inicio de recogida de datos del sensor")
 
     async def stop_sensor(self, msg):
         """ 
@@ -43,7 +60,7 @@ class NatsHandler:
             msg (nats.aio.client.Msg): Mensaje subscrito
         """
         self.sensor_state = False
-        print("Parada de recogida de datos del sensor")
+        logger.info("Parada de recogida de datos del sensor")
 
     async def run(self):
         """
@@ -52,7 +69,7 @@ class NatsHandler:
         while True:
             if self.sensor_state:
                 # Empezamos a capturar datos de sensores
-                print("Captura de datos sensor")
+                logger.info(f"Datos capturados: {data}")
                 data = self.sensor_reader.read_sensor()
                 # Publicamos datos
                 await self.nc.publish(
