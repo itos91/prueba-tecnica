@@ -1,6 +1,7 @@
 import mysql.connector
 import urllib.parse
 from datetime import datetime
+from handle_errors import handle_exception
 
 class Database:
     """
@@ -16,6 +17,7 @@ class Database:
         """
         self.conn = self.connect_db(uri)
 
+    @handle_exception
     def connect_db(self, uri:str):
         """
         Conecta a la base de datos por la URI.

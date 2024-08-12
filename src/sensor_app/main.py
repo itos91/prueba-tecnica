@@ -1,13 +1,21 @@
 import asyncio
 import argparse
+import logging
+import os
 from nats.aio.client import Client as NATS
 from sensor_reader import SensorReader
+from handle_errors import handle_exception
 from db import Database
+
+# Configuración logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class NatsHandler:
     """
     Clase que maneja los mensajes NATS
     """
+    @handle_exception
     def __init__(self, args) -> None:
         self.sensor_state = False
         self.nc = NATS()
@@ -15,6 +23,7 @@ class NatsHandler:
         self.sensor_reader = SensorReader(args.min_value, args.max_value, args.sensor)
         self.db_conn = Database(args.db_uri)
 
+    @handle_exception
     async def start(self):
         """
         Conecta con el servidor NATS y se suscribe a los subjects de inicio y parada del sensor
@@ -33,7 +42,7 @@ class NatsHandler:
             msg (nats.aio.client.Msg): Mensaje subscrito
         """
         self.sensor_state = True
-        print("Inicio de recogida de datos del sensor")
+        logger.info("Inicio de recogida de datos del sensor")
 
     async def stop_sensor(self, msg):
         """ 
@@ -43,8 +52,9 @@ class NatsHandler:
             msg (nats.aio.client.Msg): Mensaje subscrito
         """
         self.sensor_state = False
-        print("Parada de recogida de datos del sensor")
+        logger.info("Parada de recogida de datos del sensor")
 
+    @handle_exception
     async def run(self):
         """
         Bucle infinito para realizar la lectura del sensor
@@ -52,7 +62,7 @@ class NatsHandler:
         while True:
             if self.sensor_state:
                 # Empezamos a capturar datos de sensores
-                print("Captura de datos sensor")
+                logger.info(f"Datos capturados: {data}")
                 data = self.sensor_reader.read_sensor()
                 # Publicamos datos
                 await self.nc.publish(
@@ -86,11 +96,15 @@ if __name__ == '__main__':
     loop = asyncio.get_event_loop()
 
     # Ejecutamos las funciones start y run hasta que se completen
-    asyncio.ensure_future(app.start())
-    asyncio.ensure_future(app.run())
+    task_start = asyncio.ensure_future(app.start())
+    task_run = asyncio.ensure_future(app.run())
 
     # Ejecutamos el bucle de eventos hasta el infinito
     try:
         loop.run_forever()
+    except KeyboardInterrupt:
+        logger.warning("Interrumpido!")
+        task_start.cancel()
+        task_run.cancel()
     finally:
         loop.close()
