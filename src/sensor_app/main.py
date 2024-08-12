@@ -1,8 +1,10 @@
 import asyncio
 import argparse
 import logging
+import os
 from nats.aio.client import Client as NATS
 from sensor_reader import SensorReader
+from handle_errors import handle_exception
 from db import Database
 
 # Configuración logging
@@ -13,6 +15,7 @@ class NatsHandler:
     """
     Clase que maneja los mensajes NATS
     """
+    @handle_exception
     def __init__(self, args) -> None:
         self.sensor_state = False
         self.nc = NATS()
@@ -20,22 +23,11 @@ class NatsHandler:
         self.sensor_reader = SensorReader(args.min_value, args.max_value, args.sensor)
         self.db_conn = Database(args.db_uri)
 
+    @handle_exception
     async def start(self):
         """
         Conecta con el servidor NATS y se suscribe a los subjects de inicio y parada del sensor
         """
-        try:
-            await self.nc.connect("nats://localhost:4222")
-        except Exception as e:
-            usage = """
-                nats-pub [-s SERVER] <subject>
-
-                Example:
-
-                nats-sub -s demo.nats.io help -q workers 
-            """
-            logger.warning(usage)
-            logger.error(f"Exited! Error {e}")
         # Conectamos con servidor local NATS
         await self.nc.connect("nats://localhost:4222")
         # Nos subscribimos a los subjets "sensor.start" y "sensor.stop"
@@ -62,6 +54,7 @@ class NatsHandler:
         self.sensor_state = False
         logger.info("Parada de recogida de datos del sensor")
 
+    @handle_exception
     async def run(self):
         """
         Bucle infinito para realizar la lectura del sensor
@@ -103,11 +96,15 @@ if __name__ == '__main__':
     loop = asyncio.get_event_loop()
 
     # Ejecutamos las funciones start y run hasta que se completen
-    asyncio.ensure_future(app.start())
-    asyncio.ensure_future(app.run())
+    task_start = asyncio.ensure_future(app.start())
+    task_run = asyncio.ensure_future(app.run())
 
     # Ejecutamos el bucle de eventos hasta el infinito
     try:
         loop.run_forever()
+    except KeyboardInterrupt:
+        logger.warning("Interrumpido!")
+        task_start.cancel()
+        task_run.cancel()
     finally:
         loop.close()
