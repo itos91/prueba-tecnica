@@ -1,2 +1,4 @@
 mysql-connector-python==9.0.0
 nats-py==2.8.0
+pytest==8.3.2
+pytest-asyncio==0.23.8
