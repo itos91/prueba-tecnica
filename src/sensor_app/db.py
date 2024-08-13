@@ -1,7 +1,7 @@
 import mysql.connector
 import urllib.parse
 from datetime import datetime
-from handle_errors import handle_exception
+from .handle_errors import handle_exception
 
 class Database:
     """

@@ -1,11 +1,10 @@
 import asyncio
 import argparse
 import logging
-import os
 from nats.aio.client import Client as NATS
-from sensor_reader import SensorReader
-from handle_errors import handle_exception
-from db import Database
+from .sensor_reader import SensorReader
+from .handle_errors import handle_exception
+from .db import Database
 
 # Configuración logging
 logging.basicConfig(level=logging.INFO)
@@ -62,8 +61,8 @@ class NatsHandler:
         while True:
             if self.sensor_state:
                 # Empezamos a capturar datos de sensores
-                logger.info(f"Datos capturados: {data}")
                 data = self.sensor_reader.read_sensor()
+                logger.info(f"Datos capturados: {data}")
                 # Publicamos datos
                 await self.nc.publish(
                     subject="sensor.data", 
