@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS sensor_data (timestamp TEXT, data TEXT);
 
 - **sensor_app/**: Código fuente principal de la aplicación.
 - **tests/**: Pruebas unitarias para la aplicación.
-- **examples/**: Scripts de ayuda para el proyecto.
+- **scripts/**: Scripts de ayuda para el proyecto.
 - **.gitignore**: Archivos y directorios que Git debe ignorar.
 - **README.md**: Información general del proyecto.
 - **requirements.txt**: Dependencias del proyecto.
@@ -129,3 +129,9 @@ El entorno de desarrollo integrado (IDE) usado es Visual Code Studio. Para poder
     ]
 }
 ```
+
+# Testing
+
+El testing se hizo con pytest. Para ejecutar, usar el siguiente comando:
+
+`pytest tests`
